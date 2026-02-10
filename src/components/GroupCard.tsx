@@ -50,8 +50,8 @@ export default function GroupCard({ group }: GroupCardProps) {
           <div
             className="w-7 h-7 rounded flex items-center justify-center text-xs font-medium"
             style={{
-              background: 'var(--accent-gold-dim)',
-              color: 'var(--accent-gold)',
+              background: 'var(--accent-dim)',
+              color: 'var(--accent)',
               fontFamily: 'var(--font-display)',
             }}
           >
@@ -82,12 +82,12 @@ export default function GroupCard({ group }: GroupCardProps) {
             style={{
               borderColor: copied ? 'var(--accent-green)' : 'var(--border-subtle)',
               color: copied ? 'var(--accent-green)' : 'var(--text-tertiary)',
-              background: copied ? 'rgba(122,184,138,0.08)' : 'transparent',
+              background: copied ? 'var(--accent-dim)' : 'transparent',
             }}
             onMouseEnter={(e) => {
               if (!copied) {
-                e.currentTarget.style.borderColor = 'var(--accent-gold)';
-                e.currentTarget.style.color = 'var(--accent-gold)';
+                e.currentTarget.style.borderColor = 'var(--accent)';
+                e.currentTarget.style.color = 'var(--accent)';
               }
             }}
             onMouseLeave={(e) => {
@@ -110,8 +110,8 @@ export default function GroupCard({ group }: GroupCardProps) {
               color: 'var(--text-tertiary)',
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.borderColor = 'var(--accent-gold)';
-              e.currentTarget.style.color = 'var(--accent-gold)';
+              e.currentTarget.style.borderColor = 'var(--accent)';
+              e.currentTarget.style.color = 'var(--accent)';
             }}
             onMouseLeave={(e) => {
               e.currentTarget.style.borderColor = 'var(--border-subtle)';
@@ -152,7 +152,7 @@ export default function GroupCard({ group }: GroupCardProps) {
             className="flex items-center gap-1.5 mt-3 text-[10px] tracking-[0.15em] uppercase
                        transition-all duration-200 cursor-pointer"
             style={{ color: 'var(--text-muted)' }}
-            onMouseEnter={(e) => e.currentTarget.style.color = 'var(--accent-gold)'}
+            onMouseEnter={(e) => e.currentTarget.style.color = 'var(--accent)'}
             onMouseLeave={(e) => e.currentTarget.style.color = 'var(--text-muted)'}
           >
             {expanded ? (

@@ -100,11 +100,11 @@ export default function SplitBox() {
                   className="text-4xl md:text-5xl font-medium tracking-tight leading-none"
                   style={{ fontFamily: 'var(--font-display)', color: 'var(--text-primary)' }}
                 >
-                  Split<span style={{ color: 'var(--accent-gold)' }}>Box</span>
+                  Split<span style={{ color: 'var(--accent)' }}>Box</span>
                 </h1>
                 <span
                   className="animate-breathe mb-1"
-                  style={{ color: 'var(--accent-gold)', fontFamily: 'var(--font-display)', fontSize: '2rem' }}
+                  style={{ color: 'var(--accent)', fontFamily: 'var(--font-display)', fontSize: '2rem' }}
                 >
                   .
                 </span>
@@ -128,7 +128,7 @@ export default function SplitBox() {
                 background: 'var(--bg-surface)',
                 color: 'var(--text-tertiary)',
               }}
-              onMouseEnter={(e) => e.currentTarget.style.color = 'var(--accent-gold)'}
+              onMouseEnter={(e) => e.currentTarget.style.color = 'var(--accent)'}
               onMouseLeave={(e) => e.currentTarget.style.color = 'var(--text-tertiary)'}
               aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
             >
@@ -160,7 +160,7 @@ export default function SplitBox() {
             {/* Gold accent line on focus */}
             <div
               className="absolute -left-px top-4 bottom-4 w-[2px] rounded-full opacity-0 group-focus-within:opacity-100 transition-opacity duration-500"
-              style={{ background: 'var(--accent-gold)' }}
+              style={{ background: 'var(--accent)' }}
             />
             <textarea
               value={rawInput}
@@ -209,7 +209,7 @@ export default function SplitBox() {
                 fontFamily: 'var(--font-mono)',
                 fontWeight: 400,
               }}
-              onFocus={(e) => e.target.style.borderColor = 'var(--accent-gold)'}
+              onFocus={(e) => e.target.style.borderColor = 'var(--accent)'}
               onBlur={(e) => e.target.style.borderColor = 'var(--border-subtle)'}
             />
           </div>
@@ -221,9 +221,9 @@ export default function SplitBox() {
                        text-[11px] tracking-[0.2em] uppercase font-semibold
                        transition-all duration-300 cursor-pointer
                        disabled:opacity-20 disabled:cursor-not-allowed disabled:pointer-events-none
-                       hover:shadow-[0_0_24px_rgba(212,168,83,0.15)]"
+                       hover:shadow-[0_0_24px_rgba(74,234,188,0.15)]"
             style={{
-              background: 'var(--accent-gold)',
+              background: 'var(--accent)',
               color: 'var(--bg-primary)',
               fontFamily: 'var(--font-body)',
             }}
@@ -269,7 +269,7 @@ export default function SplitBox() {
             >
               <div
                 className="w-1 h-6 rounded-full flex-shrink-0"
-                style={{ background: 'var(--accent-gold)' }}
+                style={{ background: 'var(--accent)' }}
               />
               <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
                 {buildSummary()}

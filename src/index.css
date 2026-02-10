@@ -6,50 +6,50 @@
 
 :root,
 [data-theme="dark"] {
-  --bg-primary: #0D0B0E;
-  --bg-surface: #161418;
-  --bg-elevated: #1E1B21;
-  --bg-hover: #252229;
-  --border-subtle: #2A2630;
-  --border-default: #352F3B;
-  --border-accent: #D4A853;
-  --text-primary: #E8E4DF;
-  --text-secondary: #9B9498;
-  --text-tertiary: #6B6470;
-  --text-muted: #4A4550;
-  --accent-gold: #D4A853;
-  --accent-gold-dim: #D4A85320;
-  --accent-gold-glow: #D4A85340;
-  --accent-rose: #B8687D;
-  --accent-green: #7AB88A;
-  --noise-opacity: 0.025;
-  --shimmer-highlight: rgba(255, 255, 255, 0.08);
-  --ambient-glow: rgba(212, 168, 83, 0.04);
+  --bg-primary: #06090F;
+  --bg-surface: #0C1219;
+  --bg-elevated: #131B25;
+  --bg-hover: #1A2433;
+  --border-subtle: #1E2A3A;
+  --border-default: #2B3D52;
+  --border-accent: #4AEABC;
+  --text-primary: #D4DBE8;
+  --text-secondary: #8895A7;
+  --text-tertiary: #566478;
+  --text-muted: #3A4A5E;
+  --accent: #4AEABC;
+  --accent-dim: #4AEABC18;
+  --accent-glow: #4AEABC30;
+  --accent-warm: #E86A6A;
+  --accent-green: #4AEABC;
+  --noise-opacity: 0.02;
+  --shimmer-highlight: rgba(74, 234, 188, 0.06);
+  --ambient-glow: rgba(74, 234, 188, 0.035);
   --font-display: 'Bodoni Moda', serif;
   --font-body: 'Hanken Grotesk', sans-serif;
   --font-mono: 'Fira Code', monospace;
 }
 
 [data-theme="light"] {
-  --bg-primary: #F5F0EB;
+  --bg-primary: #EFF3F8;
   --bg-surface: #FFFFFF;
-  --bg-elevated: #F9F6F2;
-  --bg-hover: #EDE8E2;
-  --border-subtle: #E0D8CF;
-  --border-default: #C9BFB3;
-  --border-accent: #B8922D;
-  --text-primary: #1A1615;
-  --text-secondary: #5C5550;
-  --text-tertiary: #8A8279;
-  --text-muted: #B5ADA5;
-  --accent-gold: #B8922D;
-  --accent-gold-dim: #B8922D15;
-  --accent-gold-glow: #B8922D25;
-  --accent-rose: #A3526A;
-  --accent-green: #5A9668;
-  --noise-opacity: 0.015;
-  --shimmer-highlight: rgba(0, 0, 0, 0.04);
-  --ambient-glow: rgba(184, 146, 45, 0.06);
+  --bg-elevated: #F5F8FB;
+  --bg-hover: #E4EAF2;
+  --border-subtle: #D0DAE5;
+  --border-default: #B3C3D4;
+  --border-accent: #17B48C;
+  --text-primary: #0C1219;
+  --text-secondary: #44556A;
+  --text-tertiary: #7889A0;
+  --text-muted: #A8B8CA;
+  --accent: #17B48C;
+  --accent-dim: #17B48C12;
+  --accent-glow: #17B48C20;
+  --accent-warm: #C94F4F;
+  --accent-green: #17B48C;
+  --noise-opacity: 0.012;
+  --shimmer-highlight: rgba(23, 180, 140, 0.05);
+  --ambient-glow: rgba(23, 180, 140, 0.05);
 }
 
 * {
@@ -108,7 +108,7 @@ body::before {
 
 /* Selection */
 ::selection {
-  background: var(--accent-gold-glow);
+  background: var(--accent-glow);
   color: var(--text-primary);
 }
 
@@ -152,7 +152,7 @@ body::before {
 
 @keyframes borderGlow {
   0%, 100% { border-color: var(--border-subtle); }
-  50% { border-color: var(--accent-gold-dim); }
+  50% { border-color: var(--accent-dim); }
 }
 
 .animate-fade-up {

@@ -15,9 +15,9 @@ createRoot(document.getElementById('root')!).render(
           fontFamily: "'Hanken Grotesk', sans-serif",
           fontSize: '12px',
           letterSpacing: '0.03em',
-          background: '#1E1B21',
-          border: '1px solid #2A2630',
-          color: '#E8E4DF',
+          background: '#131B25',
+          border: '1px solid #1E2A3A',
+          color: '#D4DBE8',
         },
       }}
     />
