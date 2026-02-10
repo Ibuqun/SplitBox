@@ -29,7 +29,7 @@ npm install
 npm run dev
 ```
 
-Opens at `http://localhost:8080`.
+Opens at `https://splitbox-zeta.vercel.app/`.
 
 ## Build
 
