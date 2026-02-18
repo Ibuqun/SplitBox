@@ -1,5 +1,4 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
-import { Scissors, RotateCcw, Sun, Moon, Archive } from 'lucide-react';
 import { toast } from 'sonner';
 import type { SplitGroup } from '@/types';
 import {
@@ -13,6 +12,7 @@ import {
 import { downloadAllBatchesAsZip } from '@/utils/exportZip';
 import type { OutputDelimiter, OutputTemplate } from '@/utils/output';
 import GroupCard from './GroupCard';
+import CustomIcon from './CustomIcon';
 
 type Theme = 'dark' | 'light';
 const EMPTY_PREPARE_PREVIEW: { items: string[]; stats: PrepareItemsStats } = {
@@ -278,7 +278,7 @@ export default function SplitBox() {
               onMouseLeave={(e) => e.currentTarget.style.color = 'var(--text-tertiary)'}
               aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
             >
-              {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+              {theme === 'dark' ? <CustomIcon name="sun" className="w-4 h-4" /> : <CustomIcon name="moon" className="w-4 h-4" />}
             </button>
           </div>
         </header>
@@ -566,7 +566,7 @@ export default function SplitBox() {
               fontFamily: 'var(--font-body)',
             }}
           >
-            <Scissors className="w-3.5 h-3.5" />
+            <CustomIcon name="split" className="w-3.5 h-3.5" />
             {isSplitting ? 'Splitting...' : 'Split'}
           </button>
 
@@ -583,7 +583,7 @@ export default function SplitBox() {
               onMouseEnter={(e) => e.currentTarget.style.color = 'var(--text-secondary)'}
               onMouseLeave={(e) => e.currentTarget.style.color = 'var(--text-tertiary)'}
             >
-              <RotateCcw className="w-3 h-3" />
+              <CustomIcon name="clear" className="w-3 h-3" />
               Clear
             </button>
           )}
@@ -601,7 +601,7 @@ export default function SplitBox() {
                 borderColor: 'var(--border-subtle)',
               }}
             >
-              <Archive className="w-3 h-3" />
+              <CustomIcon name="archive" className="w-3 h-3" />
               {isExporting ? 'Exporting...' : 'Export all ZIP'}
             </button>
           )}

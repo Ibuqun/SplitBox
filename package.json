@@ -13,7 +13,6 @@
   },
   "dependencies": {
     "jszip": "^3.10.1",
-    "lucide-react": "^0.563.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "sonner": "^2.0.7"

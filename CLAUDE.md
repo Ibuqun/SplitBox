@@ -2,7 +2,7 @@
 
 ## Tech Stack
 - React 19 + TypeScript + Vite (SWC) + Tailwind CSS 3
-- Icons: lucide-react
+- Icons: custom inline SVG icons via `CustomIcon` component
 - Toasts: sonner
 - No backend, no router, no state library — single-page browser-only tool
 
@@ -15,6 +15,7 @@ src/
   components/
     SplitBox.tsx    # Main page (input, controls, summary, batch grid, theme toggle)
     GroupCard.tsx   # Individual batch card (preview, copy, download, expand)
+    CustomIcon.tsx  # Shared custom SVG icon wrapper
   workers/
     splitWorker.ts  # Background split worker for large input responsiveness
   utils/

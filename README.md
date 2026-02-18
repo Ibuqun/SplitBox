@@ -26,7 +26,7 @@ A browser-based tool for splitting large lists into manageable batches. Built fo
 - React 19 + TypeScript
 - Vite (SWC)
 - Tailwind CSS 3
-- Lucide React (icons)
+- Custom inline SVG icon system
 - Sonner (toast notifications)
 
 ## Getting Started

@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { Copy, Check, Download, ChevronDown, ChevronUp } from 'lucide-react';
 import { toast } from 'sonner';
 import type { SplitGroup } from '@/types';
 import { copyToClipboard } from '@/utils/clipboard';
@@ -10,6 +9,7 @@ import {
   type OutputDelimiter,
   type OutputTemplate,
 } from '@/utils/output';
+import CustomIcon from './CustomIcon';
 
 const PREVIEW_LINES = 4;
 
@@ -106,7 +106,7 @@ export default function GroupCard({ group, outputDelimiter, outputTemplate }: Gr
               }
             }}
           >
-            {copied ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
+            {copied ? <CustomIcon name="check" className="w-3 h-3" /> : <CustomIcon name="copy" className="w-3 h-3" />}
             {copied ? 'Copied' : 'Copy'}
           </button>
 
@@ -127,7 +127,7 @@ export default function GroupCard({ group, outputDelimiter, outputTemplate }: Gr
               e.currentTarget.style.color = 'var(--text-tertiary)';
             }}
           >
-            <Download className="w-3 h-3" />
+            <CustomIcon name="download" className="w-3 h-3" />
             .{extension}
           </button>
         </div>
@@ -166,12 +166,12 @@ export default function GroupCard({ group, outputDelimiter, outputTemplate }: Gr
           >
             {expanded ? (
               <>
-                <ChevronUp className="w-3 h-3" />
+                <CustomIcon name="chevronUp" className="w-3 h-3" />
                 Show less
               </>
             ) : (
               <>
-                <ChevronDown className="w-3 h-3" />
+                <CustomIcon name="chevronDown" className="w-3 h-3" />
                 {group.items.length - PREVIEW_LINES} more items
               </>
             )}
