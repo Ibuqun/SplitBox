@@ -1,10 +1,30 @@
-import { useState, useMemo, useEffect } from 'react';
-import { Scissors, RotateCcw, Sun, Moon } from 'lucide-react';
+import { useState, useMemo, useEffect, useRef } from 'react';
+import { Scissors, RotateCcw, Sun, Moon, Archive } from 'lucide-react';
+import { toast } from 'sonner';
 import type { SplitGroup } from '@/types';
-import { splitItems } from '@/utils/splitter';
+import {
+  type DedupeMode,
+  prepareItems,
+  type InputDelimiter,
+  type PrepareItemsStats,
+  type SplitMode,
+  type ValidationMode,
+} from '@/utils/splitter';
+import { downloadAllBatchesAsZip } from '@/utils/exportZip';
+import type { OutputDelimiter, OutputTemplate } from '@/utils/output';
 import GroupCard from './GroupCard';
 
 type Theme = 'dark' | 'light';
+const EMPTY_PREPARE_PREVIEW: { items: string[]; stats: PrepareItemsStats } = {
+  items: [],
+  stats: {
+    rawTokenCount: 0,
+    emptyRemoved: 0,
+    invalidRemoved: 0,
+    duplicatesRemoved: 0,
+    invalidExamples: [],
+  },
+};
 
 function getInitialTheme(): Theme {
   const stored = localStorage.getItem('splitbox-theme') as Theme | null;
@@ -14,35 +34,148 @@ function getInitialTheme(): Theme {
 
 export default function SplitBox() {
   const [rawInput, setRawInput] = useState('');
-  const [groupSize, setGroupSize] = useState(200);
+  const [splitMode, setSplitMode] = useState<SplitMode>('items_per_group');
+  const [delimiter, setDelimiter] = useState<InputDelimiter>('newline');
+  const [splitValue, setSplitValue] = useState(200);
+  const [dedupeMode, setDedupeMode] = useState<DedupeMode>('none');
+  const [validationMode, setValidationMode] = useState<ValidationMode>('none');
+  const [customValidationPattern, setCustomValidationPattern] = useState('');
+  const [outputDelimiter, setOutputDelimiter] = useState<OutputDelimiter>('newline');
+  const [outputTemplate, setOutputTemplate] = useState<OutputTemplate>('plain');
   const [groups, setGroups] = useState<SplitGroup[]>([]);
+  const [lastPrepareStats, setLastPrepareStats] = useState<PrepareItemsStats | null>(null);
+  const [isSplitting, setIsSplitting] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
   const [hasSplit, setHasSplit] = useState(false);
   const [theme, setTheme] = useState<Theme>(getInitialTheme);
+  const splitWorkerRef = useRef<Worker | null>(null);
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
     localStorage.setItem('splitbox-theme', theme);
   }, [theme]);
 
+  useEffect(() => {
+    splitWorkerRef.current = new Worker(new URL('../workers/splitWorker.ts', import.meta.url), {
+      type: 'module',
+    });
+
+    return () => {
+      splitWorkerRef.current?.terminate();
+      splitWorkerRef.current = null;
+    };
+  }, []);
+
   function toggleTheme() {
     setTheme(prev => prev === 'dark' ? 'light' : 'dark');
   }
 
-  const itemCount = useMemo(() => {
-    if (!rawInput.trim()) return 0;
-    return rawInput.split('\n').filter(line => line.trim().length > 0).length;
-  }, [rawInput]);
+  const previewResult = useMemo(() => {
+    try {
+      return {
+        prepared: prepareItems(rawInput, {
+          delimiter,
+          dedupeMode,
+          validationMode,
+          customValidationPattern,
+        }),
+        error: null as string | null,
+      };
+    } catch (error) {
+      return {
+        prepared: EMPTY_PREPARE_PREVIEW,
+        error: error instanceof Error ? error.message : 'Invalid preprocessing config',
+      };
+    }
+  }, [rawInput, delimiter, dedupeMode, validationMode, customValidationPattern]);
+  const preparedPreview = previewResult.prepared;
+  const prepareError = previewResult.error;
 
-  function handleSplit() {
-    if (!rawInput.trim() || groupSize < 1) return;
-    const result = splitItems(rawInput, groupSize);
-    setGroups(result);
-    setHasSplit(true);
+  const itemCount = useMemo(() => preparedPreview.items.length, [preparedPreview]);
+
+  const valueLabel = useMemo(() => {
+    if (splitMode === 'items_per_group') return 'Per Batch';
+    if (splitMode === 'max_chars_per_group') return 'Max Chars';
+    return 'Batch Count';
+  }, [splitMode]);
+
+  function runSplitInWorker(): Promise<{ groups: SplitGroup[]; stats: PrepareItemsStats }> {
+    return new Promise((resolve, reject) => {
+      const worker = splitWorkerRef.current;
+      if (!worker) {
+        reject(new Error('Split worker unavailable'));
+        return;
+      }
+
+      const onMessage = (
+        event: MessageEvent<{ groups?: SplitGroup[]; stats?: PrepareItemsStats; error?: string }>,
+      ) => {
+        worker.removeEventListener('message', onMessage);
+        if (event.data.error) {
+          reject(new Error(event.data.error));
+          return;
+        }
+
+        if (!event.data.groups || !event.data.stats) {
+          reject(new Error('Invalid split worker response'));
+          return;
+        }
+        resolve({
+          groups: event.data.groups,
+          stats: event.data.stats,
+        });
+      };
+
+      worker.addEventListener('message', onMessage);
+      worker.postMessage({
+        rawInput,
+        delimiter,
+        dedupeMode,
+        validationMode,
+        customValidationPattern,
+        splitMode,
+        splitValue,
+      });
+    });
+  }
+
+  async function handleSplit() {
+    if (!rawInput.trim() || splitValue < 1 || prepareError) return;
+    setIsSplitting(true);
+    try {
+      const result = await runSplitInWorker();
+      setGroups(result.groups);
+      setLastPrepareStats(result.stats);
+      setHasSplit(true);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to split items';
+      toast.error(message);
+    } finally {
+      setIsSplitting(false);
+    }
+  }
+
+  async function handleExportAll() {
+    if (groups.length === 0) return;
+    setIsExporting(true);
+    try {
+      await downloadAllBatchesAsZip(groups, {
+        outputTemplate,
+        outputDelimiter,
+      });
+      toast.success('Exported all batches as ZIP');
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to export ZIP';
+      toast.error(message);
+    } finally {
+      setIsExporting(false);
+    }
   }
 
   function handleClear() {
     setRawInput('');
     setGroups([]);
+    setLastPrepareStats(null);
     setHasSplit(false);
   }
 
@@ -55,9 +188,7 @@ export default function SplitBox() {
   function buildSummary() {
     if (groups.length === 0) return null;
     const totalItems = groups.reduce((sum, g) => sum + g.items.length, 0);
-    const fullGroups = groups.filter(g => g.items.length === groupSize);
     const lastGroup = groups[groups.length - 1];
-    const lastIsPartial = lastGroup.items.length < groupSize;
 
     return (
       <>
@@ -69,11 +200,26 @@ export default function SplitBox() {
           {groups.length}
         </span>
         <span className="text-[--text-tertiary]">
-          {' '}group{groups.length > 1 ? 's' : ''}
+          {' '}batch{groups.length > 1 ? 'es' : ''}
         </span>
-        {groups.length > 1 && lastIsPartial && (
+        {splitMode === 'items_per_group' && groups.length > 1 && lastGroup.items.length < splitValue && (
           <span className="text-[--text-muted] ml-2 text-xs">
-            ({fullGroups.length} &times; {groupSize}, 1 &times; {lastGroup.items.length})
+            ({groups.length - 1} &times; {splitValue}, 1 &times; {lastGroup.items.length})
+          </span>
+        )}
+        {splitMode === 'target_group_count' && (
+          <span className="text-[--text-muted] ml-2 text-xs">
+            (target: {splitValue})
+          </span>
+        )}
+        {splitMode === 'max_chars_per_group' && (
+          <span className="text-[--text-muted] ml-2 text-xs">
+            (max {splitValue} chars/batch)
+          </span>
+        )}
+        {lastPrepareStats && (lastPrepareStats.invalidRemoved > 0 || lastPrepareStats.duplicatesRemoved > 0) && (
+          <span className="text-[--text-muted] ml-2 text-xs">
+            ({lastPrepareStats.invalidRemoved} invalid removed, {lastPrepareStats.duplicatesRemoved} duplicates removed)
           </span>
         )}
       </>
@@ -194,12 +340,12 @@ export default function SplitBox() {
               className="text-[11px] tracking-[0.25em] uppercase font-medium"
               style={{ color: 'var(--text-tertiary)' }}
             >
-              Per Group
+              {valueLabel}
             </label>
             <input
               type="number"
-              value={groupSize}
-              onChange={(e) => setGroupSize(Math.max(1, parseInt(e.target.value) || 1))}
+              value={splitValue}
+              onChange={(e) => setSplitValue(Math.max(1, parseInt(e.target.value, 10) || 1))}
               min={1}
               className="w-20 rounded-md px-3 py-2.5 text-sm text-center outline-none border transition-all duration-300"
               style={{
@@ -214,9 +360,201 @@ export default function SplitBox() {
             />
           </div>
 
+          <div className="flex items-center gap-3">
+            <label
+              className="text-[11px] tracking-[0.25em] uppercase font-medium"
+              style={{ color: 'var(--text-tertiary)' }}
+            >
+              Mode
+            </label>
+            <select
+              value={splitMode}
+              onChange={(e) => setSplitMode(e.target.value as SplitMode)}
+              className="rounded-md px-3 py-2.5 text-xs outline-none border transition-all duration-300"
+              style={{
+                background: 'var(--bg-surface)',
+                borderColor: 'var(--border-subtle)',
+                color: 'var(--text-primary)',
+                fontFamily: 'var(--font-mono)',
+                fontWeight: 400,
+              }}
+              onFocus={(e) => e.target.style.borderColor = 'var(--accent)'}
+              onBlur={(e) => e.target.style.borderColor = 'var(--border-subtle)'}
+            >
+              <option value="items_per_group">Items per batch</option>
+              <option value="max_chars_per_group">Max chars per batch</option>
+              <option value="target_group_count">Target number of batches</option>
+            </select>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <label
+              className="text-[11px] tracking-[0.25em] uppercase font-medium"
+              style={{ color: 'var(--text-tertiary)' }}
+            >
+              Output
+            </label>
+            <select
+              value={outputDelimiter}
+              onChange={(e) => setOutputDelimiter(e.target.value as OutputDelimiter)}
+              className="rounded-md px-3 py-2.5 text-xs outline-none border transition-all duration-300"
+              style={{
+                background: 'var(--bg-surface)',
+                borderColor: 'var(--border-subtle)',
+                color: 'var(--text-primary)',
+                fontFamily: 'var(--font-mono)',
+                fontWeight: 400,
+              }}
+              onFocus={(e) => e.target.style.borderColor = 'var(--accent)'}
+              onBlur={(e) => e.target.style.borderColor = 'var(--border-subtle)'}
+            >
+              <option value="newline">Newline</option>
+              <option value="comma">Comma</option>
+              <option value="tab">Tab</option>
+            </select>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <label
+              className="text-[11px] tracking-[0.25em] uppercase font-medium"
+              style={{ color: 'var(--text-tertiary)' }}
+            >
+              Template
+            </label>
+            <select
+              value={outputTemplate}
+              onChange={(e) => setOutputTemplate(e.target.value as OutputTemplate)}
+              className="rounded-md px-3 py-2.5 text-xs outline-none border transition-all duration-300"
+              style={{
+                background: 'var(--bg-surface)',
+                borderColor: 'var(--border-subtle)',
+                color: 'var(--text-primary)',
+                fontFamily: 'var(--font-mono)',
+                fontWeight: 400,
+              }}
+              onFocus={(e) => e.target.style.borderColor = 'var(--accent)'}
+              onBlur={(e) => e.target.style.borderColor = 'var(--border-subtle)'}
+            >
+              <option value="plain">Plain</option>
+              <option value="sql_in">SQL IN</option>
+              <option value="quoted_csv">Quoted CSV</option>
+              <option value="json_array">JSON array</option>
+            </select>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <label
+              className="text-[11px] tracking-[0.25em] uppercase font-medium"
+              style={{ color: 'var(--text-tertiary)' }}
+            >
+              Parse
+            </label>
+            <select
+              value={delimiter}
+              onChange={(e) => setDelimiter(e.target.value as InputDelimiter)}
+              className="rounded-md px-3 py-2.5 text-xs outline-none border transition-all duration-300"
+              style={{
+                background: 'var(--bg-surface)',
+                borderColor: 'var(--border-subtle)',
+                color: 'var(--text-primary)',
+                fontFamily: 'var(--font-mono)',
+                fontWeight: 400,
+              }}
+              onFocus={(e) => e.target.style.borderColor = 'var(--accent)'}
+              onBlur={(e) => e.target.style.borderColor = 'var(--border-subtle)'}
+            >
+              <option value="newline">Newline</option>
+              <option value="comma">Comma</option>
+              <option value="tab">Tab</option>
+              <option value="auto">Auto detect</option>
+            </select>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <label
+              className="text-[11px] tracking-[0.25em] uppercase font-medium"
+              style={{ color: 'var(--text-tertiary)' }}
+            >
+              Dedupe
+            </label>
+            <select
+              value={dedupeMode}
+              onChange={(e) => setDedupeMode(e.target.value as DedupeMode)}
+              className="rounded-md px-3 py-2.5 text-xs outline-none border transition-all duration-300"
+              style={{
+                background: 'var(--bg-surface)',
+                borderColor: 'var(--border-subtle)',
+                color: 'var(--text-primary)',
+                fontFamily: 'var(--font-mono)',
+                fontWeight: 400,
+              }}
+              onFocus={(e) => e.target.style.borderColor = 'var(--accent)'}
+              onBlur={(e) => e.target.style.borderColor = 'var(--border-subtle)'}
+            >
+              <option value="none">None</option>
+              <option value="case_sensitive">Case-sensitive</option>
+              <option value="case_insensitive">Case-insensitive</option>
+            </select>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <label
+              className="text-[11px] tracking-[0.25em] uppercase font-medium"
+              style={{ color: 'var(--text-tertiary)' }}
+            >
+              Validate
+            </label>
+            <select
+              value={validationMode}
+              onChange={(e) => setValidationMode(e.target.value as ValidationMode)}
+              className="rounded-md px-3 py-2.5 text-xs outline-none border transition-all duration-300"
+              style={{
+                background: 'var(--bg-surface)',
+                borderColor: 'var(--border-subtle)',
+                color: 'var(--text-primary)',
+                fontFamily: 'var(--font-mono)',
+                fontWeight: 400,
+              }}
+              onFocus={(e) => e.target.style.borderColor = 'var(--accent)'}
+              onBlur={(e) => e.target.style.borderColor = 'var(--border-subtle)'}
+            >
+              <option value="none">None</option>
+              <option value="alphanumeric">Alphanumeric</option>
+              <option value="email">Email</option>
+              <option value="custom_regex">Custom regex</option>
+            </select>
+          </div>
+
+          {validationMode === 'custom_regex' && (
+            <div className="flex items-center gap-3">
+              <label
+                className="text-[11px] tracking-[0.25em] uppercase font-medium"
+                style={{ color: 'var(--text-tertiary)' }}
+              >
+                Pattern
+              </label>
+              <input
+                type="text"
+                value={customValidationPattern}
+                onChange={(e) => setCustomValidationPattern(e.target.value)}
+                placeholder="^[A-Z0-9]+$"
+                className="rounded-md px-3 py-2.5 text-xs outline-none border transition-all duration-300"
+                style={{
+                  background: 'var(--bg-surface)',
+                  borderColor: 'var(--border-subtle)',
+                  color: 'var(--text-primary)',
+                  fontFamily: 'var(--font-mono)',
+                  fontWeight: 400,
+                }}
+                onFocus={(e) => e.target.style.borderColor = 'var(--accent)'}
+                onBlur={(e) => e.target.style.borderColor = 'var(--border-subtle)'}
+              />
+            </div>
+          )}
+
           <button
-            onClick={handleSplit}
-            disabled={!rawInput.trim() || groupSize < 1}
+            onClick={() => { void handleSplit(); }}
+            disabled={!rawInput.trim() || splitValue < 1 || isSplitting || Boolean(prepareError)}
             className="btn-shimmer flex items-center gap-2.5 px-6 py-2.5 rounded-md
                        text-[11px] tracking-[0.2em] uppercase font-semibold
                        transition-all duration-300 cursor-pointer
@@ -229,7 +567,7 @@ export default function SplitBox() {
             }}
           >
             <Scissors className="w-3.5 h-3.5" />
-            Split
+            {isSplitting ? 'Splitting...' : 'Split'}
           </button>
 
           {hasSplit && (
@@ -250,12 +588,49 @@ export default function SplitBox() {
             </button>
           )}
 
+          {hasSplit && groups.length > 0 && (
+            <button
+              onClick={() => { void handleExportAll(); }}
+              disabled={isExporting || Boolean(prepareError)}
+              className="flex items-center gap-2 px-4 py-2.5 text-[11px] tracking-[0.15em] uppercase
+                         transition-all duration-200 cursor-pointer rounded-md border
+                         disabled:opacity-40 disabled:cursor-not-allowed"
+              style={{
+                color: 'var(--text-tertiary)',
+                fontFamily: 'var(--font-body)',
+                borderColor: 'var(--border-subtle)',
+              }}
+            >
+              <Archive className="w-3 h-3" />
+              {isExporting ? 'Exporting...' : 'Export all ZIP'}
+            </button>
+          )}
+
           {!hasSplit && rawInput.trim() && (
             <span className="text-[10px] tracking-wide" style={{ color: 'var(--text-muted)' }}>
-              &#8984;+Enter to split
+              &#8984;+Enter to split ({itemCount} prepared items)
+            </span>
+          )}
+
+          {prepareError && (
+            <span className="text-[10px] tracking-wide" style={{ color: '#ef4444' }}>
+              {prepareError}
             </span>
           )}
         </div>
+
+        {rawInput.trim() && (
+          <div className="mb-10 text-[11px]" style={{ color: 'var(--text-muted)' }}>
+            Removed before split: {preparedPreview.stats.emptyRemoved} empty
+            {`, ${preparedPreview.stats.invalidRemoved} invalid`}
+            {`, ${preparedPreview.stats.duplicatesRemoved} duplicates`}
+            {preparedPreview.stats.invalidExamples.length > 0 && (
+              <span>
+                {' '}| examples: {preparedPreview.stats.invalidExamples.join(', ')}
+              </span>
+            )}
+          </div>
+        )}
 
         {/* Summary */}
         {hasSplit && groups.length > 0 && (
@@ -278,11 +653,16 @@ export default function SplitBox() {
           </div>
         )}
 
-        {/* Groups Grid */}
+        {/* Batch Grid */}
         {hasSplit && groups.length > 0 && (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {groups.map((group) => (
-              <GroupCard key={group.index} group={group} />
+              <GroupCard
+                key={group.index}
+                group={group}
+                outputDelimiter={outputDelimiter}
+                outputTemplate={outputTemplate}
+              />
             ))}
           </div>
         )}

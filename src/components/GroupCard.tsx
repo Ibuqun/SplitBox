@@ -4,31 +4,40 @@ import { toast } from 'sonner';
 import type { SplitGroup } from '@/types';
 import { copyToClipboard } from '@/utils/clipboard';
 import { downloadAsTextFile } from '@/utils/download';
+import {
+  formatBatchContent,
+  getTemplateFileExtension,
+  type OutputDelimiter,
+  type OutputTemplate,
+} from '@/utils/output';
 
 const PREVIEW_LINES = 4;
 
 interface GroupCardProps {
   group: SplitGroup;
+  outputDelimiter: OutputDelimiter;
+  outputTemplate: OutputTemplate;
 }
 
-export default function GroupCard({ group }: GroupCardProps) {
+export default function GroupCard({ group, outputDelimiter, outputTemplate }: GroupCardProps) {
   const [copied, setCopied] = useState(false);
   const [expanded, setExpanded] = useState(false);
 
-  const content = group.items.join('\n');
+  const content = formatBatchContent(group.items, outputTemplate, outputDelimiter);
+  const extension = getTemplateFileExtension(outputTemplate);
   const hasMore = group.items.length > PREVIEW_LINES;
   const visibleItems = expanded ? group.items : group.items.slice(0, PREVIEW_LINES);
 
   async function handleCopy() {
     await copyToClipboard(content);
     setCopied(true);
-    toast.success(`Copied Group ${group.index + 1} to clipboard`);
+    toast.success(`Copied batch ${group.index + 1} to clipboard`);
     setTimeout(() => setCopied(false), 2000);
   }
 
   function handleDownload() {
-    downloadAsTextFile(content, `splitbox-group-${group.index + 1}.txt`);
-    toast.success(`Downloaded group ${group.index + 1}`);
+    downloadAsTextFile(content, `splitbox-batch-${group.index + 1}.${extension}`);
+    toast.success(`Downloaded batch ${group.index + 1}`);
   }
 
   return (
@@ -46,7 +55,7 @@ export default function GroupCard({ group }: GroupCardProps) {
         style={{ borderColor: 'var(--border-subtle)' }}
       >
         <div className="flex items-center gap-3">
-          {/* Group number badge */}
+          {/* Batch number badge */}
           <div
             className="w-7 h-7 rounded flex items-center justify-center text-xs font-medium"
             style={{
@@ -62,7 +71,7 @@ export default function GroupCard({ group }: GroupCardProps) {
               className="text-[11px] tracking-[0.15em] uppercase font-medium"
               style={{ color: 'var(--text-secondary)' }}
             >
-              Group {group.index + 1}
+              Batch {group.index + 1}
             </span>
             <span
               className="text-[10px] ml-2"
@@ -119,7 +128,7 @@ export default function GroupCard({ group }: GroupCardProps) {
             }}
           >
             <Download className="w-3 h-3" />
-            .txt
+            .{extension}
           </button>
         </div>
       </div>
