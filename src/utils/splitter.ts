@@ -66,6 +66,15 @@ function getValidationPattern(validationMode: ValidationMode, customPattern?: st
     throw new Error('customValidationPattern is required for custom_regex mode');
   }
 
+  if (customPattern.length > 500) {
+    throw new Error('customValidationPattern must be 500 characters or fewer');
+  }
+
+  // Block nested quantifiers, e.g. (a+)+ or (a*)*, which cause catastrophic backtracking (ReDoS)
+  if (/\([^()]*[+*{][^()]*\)[+*{]/.test(customPattern)) {
+    throw new Error('customValidationPattern contains nested quantifiers that could cause excessive backtracking');
+  }
+
   try {
     return new RegExp(customPattern);
   } catch {

@@ -20,6 +20,8 @@ describe('downloadAsTextFile', () => {
       }
       return originalCreateElement(tagName);
     });
+    vi.spyOn(document.body, 'appendChild').mockImplementation(() => null as unknown as Node);
+    vi.spyOn(document.body, 'removeChild').mockImplementation(() => null as unknown as Node);
 
     downloadAsTextFile('content', 'group-1.txt');
 
