@@ -1,5 +1,9 @@
 # SplitBox — Project Conventions
 
+## Page Metadata
+- Browser tab title: `SplitBox` (set in `index.html`)
+- Meta description: "Split large lists into batches instantly in your browser. No uploads, no tracking — fully client-side."
+
 ## Tech Stack
 - React 19 + TypeScript + Vite (SWC) + Tailwind CSS 3
 - Icons: custom inline SVG icons via `CustomIcon` component
@@ -42,6 +46,14 @@ src/
 - `npm run test` — Vitest watch mode
 - `npm run test:run` — one-off Vitest run (CI)
 
+## Security
+- Policy document: `security.md` — read before making any changes to validation, storage, or CI.
+- `clipboard.ts` uses only `navigator.clipboard.writeText`; no `execCommand` fallback.
+- Download anchors (`download.ts`, `exportZip.ts`) must be appended to `document.body` before `.click()` and removed after.
+- `custom_regex` validation patterns are capped at 500 characters and must not contain nested quantifiers (e.g. `(a+)+`) — enforced in `splitter.ts` to prevent ReDoS.
+- CI runs Gitleaks secret scanning on every push/PR before lint, build, and test.
+- `localStorage` stores only `splitbox-theme` (`'dark'` | `'light'`). No PII or user data is ever persisted.
+
 ## Conventions
 - Styling rules:
   - Use Tailwind utility classes for layout, spacing, and typography structure.
@@ -68,7 +80,7 @@ src/
     - `none`: no validation filter.
     - `alphanumeric`: allows `A-Z`, `a-z`, `0-9`, `_`, `-`.
     - `email`: applies a basic email format check.
-    - `custom_regex`: validates against `customValidationPattern`.
+    - `custom_regex`: validates against `customValidationPattern` (max 500 chars; nested quantifiers forbidden).
 - Ordering is preserved exactly as entered after trimming.
 - `value` must be a positive integer; invalid values throw an error in `splitItems`.
 - Split modes:
