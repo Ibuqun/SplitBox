@@ -37,6 +37,7 @@ export default function SplitBox() {
   const [splitMode, setSplitMode] = useState<SplitMode>('items_per_group');
   const [delimiter, setDelimiter] = useState<InputDelimiter>('newline');
   const [splitValue, setSplitValue] = useState(200);
+  const [splitValueRaw, setSplitValueRaw] = useState('200');
   const [dedupeMode, setDedupeMode] = useState<DedupeMode>('none');
   const [validationMode, setValidationMode] = useState<ValidationMode>('none');
   const [customValidationPattern, setCustomValidationPattern] = useState('');
@@ -344,8 +345,19 @@ export default function SplitBox() {
             </label>
             <input
               type="number"
-              value={splitValue}
-              onChange={(e) => setSplitValue(Math.max(1, parseInt(e.target.value, 10) || 1))}
+              value={splitValueRaw}
+              onChange={(e) => {
+                setSplitValueRaw(e.target.value);
+                const parsed = parseInt(e.target.value, 10);
+                if (!isNaN(parsed) && parsed >= 1) setSplitValue(parsed);
+              }}
+              onBlur={(e) => {
+                e.target.style.borderColor = 'var(--border-subtle)';
+                const parsed = parseInt(splitValueRaw, 10);
+                const clamped = isNaN(parsed) || parsed < 1 ? 1 : parsed;
+                setSplitValue(clamped);
+                setSplitValueRaw(String(clamped));
+              }}
               min={1}
               className="w-20 rounded-md px-3 py-2.5 text-sm text-center outline-none border transition-all duration-300"
               style={{
@@ -356,7 +368,6 @@ export default function SplitBox() {
                 fontWeight: 400,
               }}
               onFocus={(e) => e.target.style.borderColor = 'var(--accent)'}
-              onBlur={(e) => e.target.style.borderColor = 'var(--border-subtle)'}
             />
           </div>
 
